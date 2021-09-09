@@ -1,0 +1,88 @@
+<!--
+    IMPORTANT:
+    - Policy elements can appear only within the <inbound>, <outbound>, <backend> section elements.
+    - To apply a policy to the incoming request (before it is forwarded to the backend service), place a corresponding policy element within the <inbound> section element.
+    - To apply a policy to the outgoing response (before it is sent back to the caller), place a corresponding policy element within the <outbound> section element.
+    - To add a policy, place the cursor at the desired insertion point and select a policy from the sidebar.
+    - To remove a policy, delete the corresponding policy statement from the policy document.
+    - Position the <base> element within a section element to inherit all policies from the corresponding section element in the enclosing scope.
+    - Remove the <base> element to prevent inheriting policies from the corresponding section element in the enclosing scope.
+    - Policies are applied in the order of their appearance, from the top down.
+    - Comments within policy elements are not supported and may disappear. Place your comments between policy elements or at a higher level scope.
+-->
+<policies>
+	<inbound>
+		<base />
+		<send-request ignore-error="true" timeout="20" response-variable-name="bearerToken" mode="new">
+			<set-url>{{oAuthAuthorizationServer}}</set-url>
+			<set-method>POST</set-method>
+			<set-header name="Content-Type" exists-action="override">
+				<value>application/x-www-form-urlencoded</value>
+			</set-header>
+			<set-body>@{
+              return "client_id={{oAuthClientId}}&client_secret={{oAuthClientSecret}}&grant_type={{oAuthGrantType}}&resource={{oAuthResource}}";
+
+           }</set-body>
+		</send-request>
+	</inbound>
+	<backend>
+		<send-request mode="new" response-variable-name="data" timeout="30" ignore-error="true">
+			<set-url>{{WoEventgridTopicEndpoint}}</set-url>
+			<set-method>POST</set-method>
+			<set-header name="Authorization" exists-action="override">
+				<value>@("Bearer " + (String)((IResponse)context.Variables["bearerToken"]).Body.As<JObject>()["access_token"])</value>
+			</set-header>
+			<set-body>@{
+                var requestBody =   context.Request.Body.As<string>(preserveContent: true);
+                JObject reqJson = JObject.Parse(requestBody);
+                var objectName = reqJson["object"];
+                var actionName = reqJson["action"];
+                var wonum = reqJson["wonum"];
+
+                var data = new JObject();
+                data["wonum"] = wonum;
+
+                var woevent = new JObject();
+                woevent.Add("EventType", "WorkOrderCreated");
+                woevent.Add("Data",  data);
+                woevent.Add("Subject",  "workorderevent");
+                woevent.Add("MessageId",  Guid.NewGuid().ToString() );
+                woevent.Add("EnqueuedTimeUtc",  DateTime.UtcNow.ToString());
+
+                var events = new JArray();
+                events.Add(woevent);
+
+
+                return events.ToString();
+                }</set-body>
+		</send-request>
+	</backend>
+	<outbound>
+		<base />
+		<return-response response-variable-name="data">
+			<set-status code="200" reason="OK" />
+			<set-header name="Content-Type" exists-action="override">
+				<value>application/json</value>
+			</set-header>
+			<set-body>
+			</set-body>
+		</return-response>
+	</outbound>
+	<on-error>
+		<base />
+		<set-body>@{
+                return new JObject(
+                        new JProperty("username","APIM Alert"),
+                        new JProperty("icon_emoji", ":ghost:"),
+                        new JProperty("text", String.Format("{0} {1}\nHost: {2}\n{3} {4}\n User: {5}",
+                                                context.Request.Method,
+                                                context.Request.Url.Path + context.Request.Url.QueryString,
+                                                context.Request.Url.Host,
+                                                context.Response.StatusCode,
+                                                context.Response.StatusReason,
+                                                context.User.Email
+                                                ))
+                        ).ToString();
+            }</set-body>
+	</on-error>
+</policies>

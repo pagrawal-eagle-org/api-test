@@ -3,14 +3,17 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "ApimServiceName": {
-      "value": "saracookies-api"
+      "value": "nested-template-test"
     },
     "LinkedTemplatesBaseUrl": {
       "value": "https://stpradeeptest.blob.core.windows.net/templates"
     },
     "PolicyXMLBaseUrl": {
       "value": "https://stpradeeptest.blob.core.windows.net/templates"
-    }
+    },
+    "TemplatesStorageAccountSASToken": {
+        "value": "?sp=r&st=2021-09-09T04:36:06Z&se=2021-09-09T12:36:06Z&spr=https&sv=2020-08-04&sr=c&sig=3T8aQFLvqNOrZ1SSAJ8VmmXIRc74bpgK7sAOcJmIt54%3D"
+      }
   },
   "resources": []
 }

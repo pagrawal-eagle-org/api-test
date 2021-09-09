@@ -1,0 +1,64 @@
+<!--
+    IMPORTANT:
+    - Policy elements can appear only within the <inbound>, <outbound>, <backend> section elements.
+    - To apply a policy to the incoming request (before it is forwarded to the backend service), place a corresponding policy element within the <inbound> section element.
+    - To apply a policy to the outgoing response (before it is sent back to the caller), place a corresponding policy element within the <outbound> section element.
+    - To add a policy, place the cursor at the desired insertion point and select a policy from the sidebar.
+    - To remove a policy, delete the corresponding policy statement from the policy document.
+    - Position the <base> element within a section element to inherit all policies from the corresponding section element in the enclosing scope.
+    - Remove the <base> element to prevent inheriting policies from the corresponding section element in the enclosing scope.
+    - Policies are applied in the order of their appearance, from the top down.
+    - Comments within policy elements are not supported and may disappear. Place your comments between policy elements or at a higher level scope.
+-->
+<policies>
+	<inbound>
+		<cache-lookup-value key="icertis-token" variable-name="token" caching-type="internal" />
+		<cache-lookup-value key="icertis-token-exptime" variable-name="token-exptime" caching-type="internal" />
+		<choose>
+			<when condition="@(!context.Variables.ContainsKey("token") || 
+                               !context.Variables.ContainsKey("token-exptime") ||
+                               (context.Variables.ContainsKey("token") && 
+                                context.Variables.ContainsKey("token-exptime") && 
+                                (DateTime.Parse((String)context.Variables["token-exptime"]).AddMinutes(-1.0) 
+                                 <= DateTime.UtcNow) 
+                               )
+                            )">
+				<send-request ignore-error="false" timeout="5000" response-variable-name="jwt" mode="new">
+					<set-url>{{oAuthICertisAuthorizationServer}}</set-url>
+					<set-method>POST</set-method>
+					<set-header name="Content-Type" exists-action="override">
+						<value>application/x-www-form-urlencoded</value>
+					</set-header>
+					<set-body>@{
+                        return "client_id={{oAuthICertisClientId}}&client_secret={{oAuthICertisClientSecret}}&grant_type={{oAuthGrantType}}&scope={{oAuthICertisScope}}";
+                    }</set-body>
+				</send-request>
+				<set-variable name="token" value="@((String)((IResponse)context.Variables["jwt"]).Body.As<JObject>()["access_token"])" />
+				<set-variable name="token-exptime" value="@{
+                    string jwt = (String)context.Variables["token"];
+                    string base64 = jwt.Split('.')[1].Replace("-", "+").Replace("_", "/");
+                    int mod4 = base64.Length % 4;
+                    if (mod4 > 0)
+                    {
+                        base64 += new String('=', 4 - mod4);
+                    }
+                    string base64_encoded = System.Text.Encoding.ASCII.GetString(Convert.FromBase64String(base64));
+                    double exp_num = (double)JObject.Parse(base64_encoded)["exp"];
+                    DateTime exp = (new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)).AddSeconds(exp_num);
+                    return exp.ToString("MM-dd-yyyy HH:mm:ss");
+                }" />
+				<cache-store-value key="icertis-token" value="@((String)context.Variables["token"])" duration="3600" caching-type="internal" />
+				<cache-store-value key="icertis-token-exptime" value="@((String)context.Variables["token-exptime"])" duration="3600" caching-type="internal" />
+			</when>
+		</choose>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>
