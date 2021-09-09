@@ -1,0 +1,97 @@
+<!--
+    IMPORTANT:
+    - Policy elements can appear only within the <inbound>, <outbound>, <backend> section elements.
+    - To apply a policy to the incoming request (before it is forwarded to the backend service), place a corresponding policy element within the <inbound> section element.
+    - To apply a policy to the outgoing response (before it is sent back to the caller), place a corresponding policy element within the <outbound> section element.
+    - To add a policy, place the cursor at the desired insertion point and select a policy from the sidebar.
+    - To remove a policy, delete the corresponding policy statement from the policy document.
+    - Position the <base> element within a section element to inherit all policies from the corresponding section element in the enclosing scope.
+    - Remove the <base> element to prevent inheriting policies from the corresponding section element in the enclosing scope.
+    - Policies are applied in the order of their appearance, from the top down.
+    - Comments within policy elements are not supported and may disappear. Place your comments between policy elements or at a higher level scope.
+-->
+<policies>
+	<inbound>
+		<check-header name="ABS-Api-Environment-Key" failed-check-httpcode="401" failed-check-error-message="ABS-Api-Environment-Key is required" ignore-case="false" />
+		<set-variable name="envProps" value="{{environment-properties}}" />
+		<set-variable name="maximoUrl" value="@{                    
+                    var prop = context.Request.Headers.GetValueOrDefault("ABS-Api-Environment-Key")+"-maximourl";  
+                    JObject json = JObject.Parse(context.Variables.GetValueOrDefault<string>("envProps"));                
+                    var propValue = json.GetValue(prop) ;
+                    return (string)propValue; 
+        }" />
+		<choose>
+			<when condition="@(context.Variables["maximoUrl"] == null)">
+				<return-response>
+					<set-status code="403" reason="Invalid ABS-Api-Environment-Key" />
+				</return-response>
+			</when>
+		</choose>
+	</inbound>
+	<backend>
+		<send-request mode="new" response-variable-name="data" timeout="30" ignore-error="true">
+			<set-url>{{AgreementTopicEndpoint}}</set-url>
+			<set-method>POST</set-method>
+			<set-header name="BrokerProperties" exists-action="override">
+				<value>@{
+                var json = new JObject();
+                json.Add("MessageId", context.RequestId);
+                json.Add("Key", context.Request.Headers.GetValueOrDefault("ABS-Api-Environment-Key"));
+                return json.ToString(Newtonsoft.Json.Formatting.None);                    
+            }</value>
+			</set-header>
+			<set-body>@{
+                var requestBody =   context.Request.Body.As<string>(preserveContent: true);
+                JObject reqJson = JObject.Parse(requestBody);
+                var objectName = reqJson["object"];
+                var actionName = reqJson["action"];
+                var agreementNum = reqJson["agreementNum"];
+
+                var data = new JObject();
+                data["agreementNum"] = agreementNum;
+
+                var woevent = new JObject();
+                woevent.Add("EventType", "FYFAgreementCreated");
+                woevent.Add("ABS-Api-Environment-Key", context.Request.Headers.GetValueOrDefault("ABS-Api-Environment-Key"));
+                woevent.Add("Data",  data);
+                woevent.Add("Subject",  "ContractEvent");
+                woevent.Add("MessageId",  Guid.NewGuid().ToString() );
+                woevent.Add("EnqueuedTimeUtc",  DateTime.UtcNow.ToString());
+
+                var events = new JArray();
+                events.Add(woevent);
+
+
+                return events.ToString();
+                }</set-body>
+			<authentication-managed-identity resource="https://servicebus.azure.net/" />
+		</send-request>
+	</backend>
+	<outbound>
+		<base />
+		<return-response response-variable-name="data">
+			<set-status code="200" reason="OK" />
+			<set-header name="Content-Type" exists-action="override">
+				<value>application/json</value>
+			</set-header>
+			<set-body />
+		</return-response>
+	</outbound>
+	<on-error>
+		<base />
+		<set-body>@{
+                return new JObject(
+                        new JProperty("username","APIM Alert"),
+                        new JProperty("icon_emoji", ":ghost:"),
+                        new JProperty("text", String.Format("{0} {1}\nHost: {2}\n{3} {4}\n User: {5}",
+                                                context.Request.Method,
+                                                context.Request.Url.Path + context.Request.Url.QueryString,
+                                                context.Request.Url.Host,
+                                                context.Response.StatusCode,
+                                                context.Response.StatusReason,
+                                                context.User.Email
+                                                ))
+                        ).ToString();
+            }</set-body>
+	</on-error>
+</policies>

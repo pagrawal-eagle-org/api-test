@@ -1,0 +1,251 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "ApimServiceName": {
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "AgreementTopicEndpoint",
+        "value": "https://abs-internal.servicebus.windows.net/customer/messages"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/AgreementTopicEndpoint')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": true,
+        "displayName": "apikey"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/apikey')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "environment-properties",
+        "value": "{\n  \"freddev19-maximourl\":\"https://freddev19.eagle.org/maximo/\",\n  \"freddev19-gemsurl\":\"https://dev-ebsla-26.oracle.eagle.org:4513/webservices/rest/\",\n  \"freddev9-maximourl\":\"https://freddev9.eagle.org/maximo/\",\n  \"freddev9-gemsurl\":\"https://dev-ebsla-26.oracle.eagle.org:4513/webservices/rest/\",  \n}"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/environment-properties')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "freddev19-gemsurl",
+        "value": "https://dev-ebsla-26.oracle.eagle.org:4513/webservices/rest/login"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/freddev19-gemsurl')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "freddev19-maximourl",
+        "value": "https://freddev19.eagle.org/maximo/"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/freddev19-maximourl')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "freddev19-maxurl",
+        "value": "https://freddev19.eagle.org/maximo/"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/freddev19-maxurl')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "freddev9-maxurl",
+        "value": "https://freddev9.eagle.org/maximo/"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/freddev9-maxurl')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "gemsbasicauth",
+        "value": "Basic RVNCX0FOQUxZU1Q6d2VsY29tZTE="
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/gemsbasicauth')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "GemsEnvUrl",
+        "value": "http://dev-ebsla-26.oracle.eagle.org:8070/webservices/rest/"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/GemsEnvUrl')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "IcertisEnvUrl",
+        "value": "https://absqa-business-api.icertis.com/api/v1/agreements/"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/IcertisEnvUrl')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "KeyVaultURL",
+        "value": "https://abs-internal-key-vault.vault.azure.net/"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/KeyVaultURL')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "MaximoEnv",
+        "value": "https://freddev9.eagle.org/maximo/api/os/"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/MaximoEnv')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": true,
+        "displayName": "oAuthAuthorizationServer"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/oAuthAuthorizationServer')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": true,
+        "displayName": "oAuthClientId"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/oAuthClientId')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": true,
+        "displayName": "oAuthClientSecret"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/oAuthClientSecret')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": true,
+        "displayName": "oAuthGrantType"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/oAuthGrantType')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "oAuthICertisAuthorizationServer",
+        "value": "https://login.microsoftonline.com/d810b06c-d004-4d52-b0aa-4f3581ee7020/oauth2/v2.0/token"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/oAuthICertisAuthorizationServer')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": true,
+        "displayName": "oAuthICertisClientId",
+        "keyVault": {
+          "secretIdentifier": "https://abs-internal-key-vault.vault.azure.net/secrets/oAuthICertisClientId"
+        }
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/oAuthICertisClientId')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": true,
+        "displayName": "oAuthICertisClientSecret",
+        "keyVault": {
+          "secretIdentifier": "https://abs-internal-key-vault.vault.azure.net/secrets/oAuthICertisClientSecret"
+        }
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/oAuthICertisClientSecret')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "oAuthICertisScope",
+        "value": "api://12924271-987d-4fc5-a55e-33b6644da650/.default"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/oAuthICertisScope')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": true,
+        "displayName": "oAuthResource"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/oAuthResource')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    },
+    {
+      "properties": {
+        "tags": [],
+        "secret": false,
+        "displayName": "WoEventgridTopicEndpoint",
+        "value": "https://abs-internal.servicebus.windows.net/workorder/messages"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/WOServiceBusTopic')]",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "apiVersion": "2021-01-01-preview"
+    }
+  ]
+}

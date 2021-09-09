@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "ApimServiceName": {
+      "value": "saracookies-api"
+    },
+    "LinkedTemplatesBaseUrl": {
+      "value": "https://stpradeeptest.blob.core.windows.net/templates"
+    },
+    "PolicyXMLBaseUrl": {
+      "value": "https://stpradeeptest.blob.core.windows.net/templates"
+    }
+  },
+  "resources": []
+}

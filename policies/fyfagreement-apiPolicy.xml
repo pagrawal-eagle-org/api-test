@@ -1,0 +1,114 @@
+<!--
+    IMPORTANT:
+    - Policy elements can appear only within the <inbound>, <outbound>, <backend> section elements.
+    - To apply a policy to the incoming request (before it is forwarded to the backend service), place a corresponding policy element within the <inbound> section element.
+    - To apply a policy to the outgoing response (before it is sent back to the caller), place a corresponding policy element within the <outbound> section element.
+    - To add a policy, place the cursor at the desired insertion point and select a policy from the sidebar.
+    - To remove a policy, delete the corresponding policy statement from the policy document.
+    - Position the <base> element within a section element to inherit all policies from the corresponding section element in the enclosing scope.
+    - Remove the <base> element to prevent inheriting policies from the corresponding section element in the enclosing scope.
+    - Policies are applied in the order of their appearance, from the top down.
+    - Comments within policy elements are not supported and may disappear. Place your comments between policy elements or at a higher level scope.
+-->
+<policies>
+	<inbound>
+		<check-header name="ABS-Api-Environment-Key" failed-check-httpcode="401" failed-check-error-message="ABS-Api-Environment-Key is required" ignore-case="false" />
+		<set-variable name="envProps" value="{{environment-properties}}" />
+		<set-variable name="maximoUrl" value="@{                    
+                    var prop = context.Request.Headers.GetValueOrDefault("ABS-Api-Environment-Key")+"-maximourl";  
+                    JObject json = JObject.Parse(context.Variables.GetValueOrDefault<string>("envProps"));                
+                    var propValue = json.GetValue(prop) ;
+                    return (string)propValue; 
+        }" />
+		<choose>
+			<when condition="@(context.Variables["maximoUrl"] == null)">
+				<return-response>
+					<set-status code="403" reason="Invalid ABS-Api-Environment-Key" />
+				</return-response>
+			</when>
+		</choose>
+		<cache-lookup-value key="@{ return context.Request.Headers.GetValueOrDefault("ABS-Api-Environment-Key") + "-maximo-token";  }" variable-name="apikey" caching-type="internal" />
+		<cache-lookup-value key="@{ return context.Request.Headers.GetValueOrDefault("ABS-Api-Environment-Key") + "-maximo-token-exptime";}" variable-name="apikey-exptime" caching-type="internal" />
+		<choose>
+			<when condition="@(!context.Variables.ContainsKey("apikey") || 
+                               !context.Variables.ContainsKey("apikey-exptime") ||
+                               (context.Variables.ContainsKey("apikey") && 
+                                context.Variables.ContainsKey("apikey-exptime") && 
+                                (DateTime.Parse((String)context.Variables["apikey-exptime"]).AddMinutes(-1.0) 
+                                 <= DateTime.UtcNow) 
+                               )
+                            )">
+				<send-request mode="new" response-variable-name="keyvaultsecret" timeout="20" ignore-error="false">
+					<set-url>@{
+                        return "{{KeyVaultURL}}" +"secrets/" + context.Request.Headers.GetValueOrDefault("ABS-Api-Environment-Key") + "-maxuser" + "?api-version=7.0";
+                    }</set-url>
+					<set-method>GET</set-method>
+					<authentication-managed-identity resource="https://vault.azure.net" />
+				</send-request>
+				<set-variable name="maxUser" value="@((String)((IResponse)context.Variables["keyvaultsecret"]).Body.As<JObject>(true)["value"])" />
+				<send-request mode="new" response-variable-name="keyvaultsecret" timeout="20" ignore-error="false">
+					<set-url>@{
+                        return "{{KeyVaultURL}}" +"secrets/" + context.Request.Headers.GetValueOrDefault("ABS-Api-Environment-Key") + "-maxpassword" + "?api-version=7.0";
+                    }</set-url>
+					<set-method>GET</set-method>
+					<authentication-managed-identity resource="https://vault.azure.net" />
+				</send-request>
+				<set-variable name="maxPassword" value="@((String)((IResponse)context.Variables["keyvaultsecret"]).Body.As<JObject>(true)["value"])" />
+				<send-request ignore-error="true" timeout="60" response-variable-name="send-request-response" mode="new">
+					<set-url>@(((String)context.Variables["maximoUrl"])+ "/j_security_check")</set-url>
+					<set-method>POST</set-method>
+					<set-header name="Content-Type" exists-action="override">
+						<value>application/x-www-form-urlencoded</value>
+					</set-header>
+					<set-body>@{
+                        return "j_username=" + ((String)context.Variables["maxUser"]) + "&j_password=" + (String)context.Variables["maxPassword"] ;
+                    }</set-body>
+				</send-request>
+				<choose>
+					<when condition="@(((IResponse)context.Variables["send-request-response"]).StatusCode == 303)">
+						<send-request ignore-error="true" timeout="60" response-variable-name="send-request-response" mode="new">
+							<set-url>@(((String)context.Variables["maximoUrl"]) + "/api/apitoken/create")</set-url>
+							<set-method>POST</set-method>
+							<set-header name="Cookie" exists-action="skip">
+								<value>@{
+                                string rawcookie = ((IResponse)context.Variables["send-request-response"]).Headers.GetValueOrDefault("Set-Cookie");
+                                rawcookie = rawcookie.Replace("path=/,","").Replace("; path=/; secure","");
+                                return rawcookie;}</value>
+							</set-header>
+							<set-body>@{
+                                return "{ 'expiration':21599}";
+                            }</set-body>
+						</send-request>
+						<set-variable name="apikey" value="@((String)((IResponse)context.Variables["send-request-response"]).Body.As<JObject>(true)["apikey"])" />
+						<set-variable name="apikey-exptime" value="@{
+                            DateTime exp = DateTime.UtcNow.AddSeconds(21600);                            
+                            return exp.ToString("MM-dd-yyyy HH:mm:ss");
+                        }" />
+						<cache-store-value key="@{
+                            var configKey = context.Request.Headers.GetValueOrDefault("ABS-Api-Environment-Key");
+                            return configKey + "-maximo-token";
+                            }" value="@((String)context.Variables["apikey"])" duration="21600" caching-type="internal" />
+						<cache-store-value key="@{
+                            var configKey = context.Request.Headers.GetValueOrDefault("ABS-Api-Environment-Key");
+                            return configKey + "-maximo-token-exptime";
+                          }" value="@((String)context.Variables["apikey-exptime"])" duration="21600" caching-type="internal" />
+					</when>
+				</choose>
+			</when>
+		</choose>
+	</inbound>
+	<backend />
+	<outbound />
+	<on-error>
+		<set-header name="ErrorReason" exists-action="override">
+			<value>@(context.LastError.Reason)</value>
+		</set-header>
+		<set-header name="ErrorMessage" exists-action="override">
+			<value>@(context.LastError.Message)</value>
+		</set-header>
+		<set-header name="ErrorStatusCode" exists-action="override">
+			<value>@(context.Response.StatusCode.ToString())</value>
+		</set-header>
+		<base />
+	</on-error>
+</policies>
